@@ -460,10 +460,13 @@ class JobSearchApp {
     }
     
     formatSalary(job) {
+        // Handle yearly salary
         if (job.job_min_salary && job.job_max_salary) {
-            return `$${job.job_min_salary.toLocaleString()} - $${job.job_max_salary.toLocaleString()}`;
+            const period = job.job_salary_period === 'YEAR' ? '/year' : '';
+            return `$${job.job_min_salary.toLocaleString()} - $${job.job_max_salary.toLocaleString()}${period}`;
         } else if (job.job_min_salary) {
-            return `$${job.job_min_salary.toLocaleString()}+`;
+            const period = job.job_salary_period === 'YEAR' ? '/year' : '';
+            return `$${job.job_min_salary.toLocaleString()}+${period}`;
         } else if (job.job_salary) {
             return job.job_salary;
         }
@@ -472,9 +475,40 @@ class JobSearchApp {
     
     formatDate(dateString) {
         if (!dateString) return 'Recently posted';
+        
         try {
-            return new Date(dateString).toLocaleDateString();
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            
+            return date.toLocaleDateString();
         } catch (error) {
+            // Handle posted_at_timestamp (Unix timestamp)
+            if (typeof dateString === 'number') {
+                try {
+                    const date = new Date(dateString * 1000);
+                    const now = new Date();
+                    const diffTime = Math.abs(now - date);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays === 0) return 'Today';
+                    if (diffDays === 1) return 'Yesterday';
+                    if (diffDays < 7) return `${diffDays} days ago`;
+                    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+                    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+                    
+                    return date.toLocaleDateString();
+                } catch (timestampError) {
+                    return 'Recently posted';
+                }
+            }
             return 'Recently posted';
         }
     }
@@ -647,6 +681,33 @@ class JobSearchApp {
         const row = document.createElement('tr');
         const isFavorite = this.favorites.some(fav => fav.id === job.id);
         
+        // Format salary based on the data structure
+        let salaryDisplay = 'Salary not specified';
+        if (job.salary) {
+            salaryDisplay = job.salary;
+        } else if (job.job_min_salary || job.job_max_salary) {
+            salaryDisplay = this.formatSalary(job);
+        } else if (job.salary_min || job.salary_max) {
+            // Legacy format support
+            if (job.salary_min && job.salary_max) {
+                salaryDisplay = `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`;
+            } else if (job.salary_min) {
+                salaryDisplay = `$${job.salary_min.toLocaleString()}+`;
+            }
+        }
+        
+        // Format date based on the data structure
+        let dateDisplay = 'Recently posted';
+        if (job.posted) {
+            dateDisplay = job.posted;
+        } else if (job.job_posted_at_datetime_utc) {
+            dateDisplay = this.formatDate(job.job_posted_at_datetime_utc);
+        } else if (job.job_posted_at_timestamp) {
+            dateDisplay = this.formatDate(job.job_posted_at_timestamp);
+        } else if (job.created) {
+            dateDisplay = this.formatDate(job.created);
+        }
+        
         row.innerHTML = `
             <td>
                 <div class="job-title" data-job-id="${job.id}">${job.title}</div>
@@ -658,10 +719,10 @@ class JobSearchApp {
                 <div class="job-location">${job.location}</div>
             </td>
             <td>
-                <div class="job-salary">$${job.salary_min?.toLocaleString()} - $${job.salary_max?.toLocaleString()}</div>
+                <div class="job-salary">${salaryDisplay}</div>
             </td>
             <td>
-                <div class="job-date">${this.formatDate(job.created)}</div>
+                <div class="job-date">${dateDisplay}</div>
             </td>
             <td>
                 <div class="action-buttons">
@@ -687,12 +748,39 @@ class JobSearchApp {
         const job = this.currentJobs.find(j => j.id === jobId);
         if (!job) return;
         
+        // Format salary for modal display
+        let salaryDisplay = 'Salary not specified';
+        if (job.salary) {
+            salaryDisplay = job.salary;
+        } else if (job.job_min_salary || job.job_max_salary) {
+            salaryDisplay = this.formatSalary(job);
+        } else if (job.salary_min || job.salary_max) {
+            // Legacy format support
+            if (job.salary_min && job.salary_max) {
+                salaryDisplay = `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`;
+            } else if (job.salary_min) {
+                salaryDisplay = `$${job.salary_min.toLocaleString()}+`;
+            }
+        }
+        
+        // Format date for modal display
+        let dateDisplay = 'Recently posted';
+        if (job.posted) {
+            dateDisplay = job.posted;
+        } else if (job.job_posted_at_datetime_utc) {
+            dateDisplay = this.formatDate(job.job_posted_at_datetime_utc);
+        } else if (job.job_posted_at_timestamp) {
+            dateDisplay = this.formatDate(job.job_posted_at_timestamp);
+        } else if (job.created) {
+            dateDisplay = this.formatDate(job.created);
+        }
+        
         // Populate modal content
         this.modalJobTitle.textContent = job.title;
         this.modalCompany.textContent = job.company;
         this.modalLocation.textContent = job.location;
-        this.modalSalary.textContent = `$${job.salary_min?.toLocaleString()} - $${job.salary_max?.toLocaleString()}`;
-        this.modalDate.textContent = this.formatDate(job.created);
+        this.modalSalary.textContent = salaryDisplay;
+        this.modalDate.textContent = dateDisplay;
         this.modalDescription.innerHTML = job.description;
         
         // Update buttons
@@ -779,10 +867,35 @@ class JobSearchApp {
     sortJobs() {
         switch (this.currentSort) {
             case 'date':
-                this.currentJobs.sort((a, b) => new Date(b.created) - new Date(a.created));
+                this.currentJobs.sort((a, b) => {
+                    // Get date for sorting - support multiple date formats
+                    const getDateValue = (job) => {
+                        if (job.job_posted_at_timestamp) {
+                            return new Date(job.job_posted_at_timestamp * 1000);
+                        } else if (job.job_posted_at_datetime_utc) {
+                            return new Date(job.job_posted_at_datetime_utc);
+                        } else if (job.created) {
+                            return new Date(job.created);
+                        }
+                        return new Date(0); // Default to epoch if no date found
+                    };
+                    
+                    return getDateValue(b) - getDateValue(a); // Most recent first
+                });
                 break;
             case 'salary':
-                this.currentJobs.sort((a, b) => (b.salary_max || 0) - (a.salary_max || 0));
+                this.currentJobs.sort((a, b) => {
+                    // Get max salary for sorting - support multiple salary formats
+                    const getMaxSalary = (job) => {
+                        if (job.job_max_salary) return job.job_max_salary;
+                        if (job.salary_max) return job.salary_max;
+                        if (job.job_min_salary) return job.job_min_salary;
+                        if (job.salary_min) return job.salary_min;
+                        return 0;
+                    };
+                    
+                    return getMaxSalary(b) - getMaxSalary(a); // Highest first
+                });
                 break;
             case 'company':
                 this.currentJobs.sort((a, b) => a.company.localeCompare(b.company));
@@ -854,6 +967,33 @@ class JobSearchApp {
         container.innerHTML = '';
         
         this.favorites.forEach(job => {
+            // Format salary for favorites display
+            let salaryDisplay = 'Salary not specified';
+            if (job.salary) {
+                salaryDisplay = job.salary;
+            } else if (job.job_min_salary || job.job_max_salary) {
+                salaryDisplay = this.formatSalary(job);
+            } else if (job.salary_min || job.salary_max) {
+                // Legacy format support
+                if (job.salary_min && job.salary_max) {
+                    salaryDisplay = `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}`;
+                } else if (job.salary_min) {
+                    salaryDisplay = `$${job.salary_min.toLocaleString()}+`;
+                }
+            }
+            
+            // Format date for favorites display
+            let dateDisplay = 'Recently posted';
+            if (job.posted) {
+                dateDisplay = job.posted;
+            } else if (job.job_posted_at_datetime_utc) {
+                dateDisplay = this.formatDate(job.job_posted_at_datetime_utc);
+            } else if (job.job_posted_at_timestamp) {
+                dateDisplay = this.formatDate(job.job_posted_at_timestamp);
+            } else if (job.created) {
+                dateDisplay = this.formatDate(job.created);
+            }
+            
             const jobElement = document.createElement('div');
             jobElement.className = 'favorite-job';
             jobElement.innerHTML = `
@@ -861,8 +1001,8 @@ class JobSearchApp {
                     <div style="flex: 1;">
                         <h4 class="job-title" onclick="jobApp.showJobModal('${job.id}')">${job.title}</h4>
                         <p><strong>${job.company}</strong> - ${job.location}</p>
-                        <p class="job-salary">$${job.salary_min?.toLocaleString()} - $${job.salary_max?.toLocaleString()}</p>
-                        <p class="job-date">Posted: ${this.formatDate(job.created)}</p>
+                        <p class="job-salary">${salaryDisplay}</p>
+                        <p class="job-date">Posted: ${dateDisplay}</p>
                     </div>
                     <div class="action-buttons">
                         <button class="btn btn-small btn-primary" onclick="jobApp.showJobModal('${job.id}')">
@@ -1003,19 +1143,6 @@ class JobSearchApp {
                 </td>
             </tr>
         `;
-    }
-    
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffTime = Math.abs(now - date);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-        
-        return date.toLocaleDateString();
     }
     
     // Local Storage Methods
