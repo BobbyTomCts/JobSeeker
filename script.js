@@ -1,9 +1,34 @@
 class JobSearchApp {
     constructor() {
-        // API Configuration (Using Adzuna API - requires free API key)
-        this.API_BASE_URL = 'https://api.adzuna.com/v1/api/jobs';
-        this.API_KEY = 'YOUR_ADZUNA_API_KEY'; // Replace with actual API key
-        this.APP_ID = 'YOUR_ADZUNA_APP_ID'; // Replace with actual App ID
+        // API Configuration - Choose your preferred API
+        // You can also use an external config.js file by defining API_CONFIG globally
+        this.apiConfig = window.API_CONFIG || {
+            // Option 1: Adzuna API (Recommended - Free with registration)
+            adzuna: {
+                baseUrl: 'https://api.adzuna.com/v1/api/jobs',
+                appId: 'YOUR_ADZUNA_APP_ID', // Get from https://developer.adzuna.com/
+                apiKey: 'YOUR_ADZUNA_API_KEY',
+                enabled: false, // Set to true when you have keys
+                country: 'us'   // us, gb, au, ca, de, fr, etc.
+            },
+            
+            // Option 2: JSearch API (RapidAPI - Free tier available)
+            jsearch: {
+                baseUrl: 'https://jsearch.p.rapidapi.com/search',
+                apiKey: 'YOUR_RAPIDAPI_KEY', // Get from https://rapidapi.com/
+                enabled: false // Set to true when you have key
+            },
+            
+            // Option 3: Reed API (UK focused)
+            reed: {
+                baseUrl: 'https://www.reed.co.uk/api/1.0/search',
+                apiKey: 'YOUR_REED_API_KEY', // Get from https://www.reed.co.uk/developers
+                enabled: false // Set to true when you have key
+            }
+        };
+        
+        // Current active API
+        this.activeApi = this.getActiveApi();
         
         // App state
         this.currentPage = 1;
@@ -11,6 +36,7 @@ class JobSearchApp {
         this.currentJobs = [];
         this.totalJobs = 0;
         this.currentSort = 'relevance';
+        this.lastSearchParams = null;
         this.favorites = this.loadFavorites();
         this.applications = this.loadApplications();
         this.uploadedResume = this.loadResume();
@@ -22,6 +48,113 @@ class JobSearchApp {
         this.displayResume();
         this.displayApplications();
         this.displayFavorites();
+        
+        // Show API status
+        this.displayApiStatus();
+    }
+    
+    getActiveApi() {
+        // Return the first enabled API
+        for (const [name, config] of Object.entries(this.apiConfig)) {
+            if (config.enabled) {
+                return name;
+            }
+        }
+        return null; // No API enabled - will use demo mode
+    }
+    
+    displayApiStatus() {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'api-status';
+        statusDiv.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            z-index: 1000;
+            ${this.activeApi ? 
+                'background: var(--success-color); color: white;' : 
+                'background: var(--warning-color); color: white;'
+            }
+        `;
+        statusDiv.innerHTML = this.activeApi ? 
+            `🚀 Live API: ${this.activeApi.toUpperCase()}` : 
+            '🎭 Demo Mode';
+        
+        // Add click handler for API testing
+        statusDiv.style.cursor = 'pointer';
+        statusDiv.title = 'Click to test API connection';
+        statusDiv.addEventListener('click', () => {
+            this.testApiConnection();
+        });
+        
+        document.body.appendChild(statusDiv);
+        
+        // Log API status to console
+        console.log(`🔧 JobSeeker API Status: ${this.activeApi ? `Using ${this.activeApi.toUpperCase()} API` : 'Demo Mode'}`);
+        if (this.activeApi) {
+            console.log(`📊 API Config:`, this.apiConfig[this.activeApi]);
+        }
+    }
+    
+    // Test API connection
+    async testApiConnection() {
+        if (!this.activeApi) {
+            alert('No API configured - running in demo mode');
+            return;
+        }
+        
+        console.log(`🧪 Testing ${this.activeApi.toUpperCase()} API connection...`);
+        
+        try {
+            this.showLoading();
+            
+            let testJobs = [];
+            
+            // Test the active API
+            if (this.activeApi === 'adzuna') {
+                testJobs = await this.searchAdzunaJobs('developer', 'New York', {});
+            } else if (this.activeApi === 'jsearch') {
+                testJobs = await this.searchJSearchJobs('developer', 'New York', {});
+            } else if (this.activeApi === 'reed') {
+                testJobs = await this.searchReedJobs('developer', 'London', {});
+            }
+            
+            if (testJobs && testJobs.length > 0) {
+                alert(`✅ API Test Successful!\nFound ${testJobs.length} jobs\nFirst result: ${testJobs[0].title} at ${testJobs[0].company}`);
+                console.log(`✅ API test successful:`, testJobs);
+            } else {
+                alert('⚠️ API connected but no results returned. Try a different search term.');
+            }
+            
+        } catch (error) {
+            console.error(`❌ API test failed:`, error);
+            
+            let errorMessage = `❌ API Test Failed: ${error.message}\n\n`;
+            
+            if (error.message.includes('CORS')) {
+                errorMessage += `🔧 CORS Issue Solutions:\n`;
+                errorMessage += `1. Use a local server (not file:// protocol)\n`;
+                errorMessage += `2. Install a CORS browser extension\n`;
+                errorMessage += `3. Try the JSearch API instead (better CORS support)\n\n`;
+                errorMessage += `Quick fix: Right-click index.html → "Open with Live Server" if using VS Code`;
+            } else if (error.message.includes('401') || error.message.includes('Invalid')) {
+                errorMessage += `🔑 Authentication Issue:\n`;
+                errorMessage += `- Double-check your API keys in config.js\n`;
+                errorMessage += `- Verify your API subscription is active`;
+            } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+                errorMessage += `⏱️ Rate Limit Issue:\n`;
+                errorMessage += `- Wait a few minutes before trying again\n`;
+                errorMessage += `- Consider upgrading your API plan`;
+            }
+            
+            alert(errorMessage);
+        } finally {
+            this.hideLoading();
+        }
     }
     
     initializeElements() {
@@ -140,17 +273,270 @@ class JobSearchApp {
         this.currentPage = 1;
         
         try {
-            // Since we can't use real API without keys, we'll simulate API response
-            const jobs = await this.simulateJobSearch(keywords, location, minSalary, maxSalary, jobType);
+            let jobs = [];
+            
+            // Use real API if available, otherwise fallback to demo data
+            if (this.activeApi === 'adzuna') {
+                jobs = await this.searchAdzunaJobs(keywords, location, { minSalary, maxSalary, jobType });
+            } else if (this.activeApi === 'jsearch') {
+                jobs = await this.searchJSearchJobs(keywords, location, { minSalary, maxSalary, jobType });
+            } else if (this.activeApi === 'reed') {
+                jobs = await this.searchReedJobs(keywords, location, { minSalary, maxSalary, jobType });
+            } else {
+                // Fallback to simulated data
+                jobs = await this.simulateJobSearch(keywords, location, minSalary, maxSalary, jobType);
+            }
+            
             this.currentJobs = jobs;
             this.totalJobs = jobs.length;
+            this.lastSearchParams = { keywords, location, minSalary, maxSalary, jobType };
             this.displayJobs();
         } catch (error) {
             console.error('Error searching jobs:', error);
             this.showError('Failed to search jobs. Please try again.');
+            
+            // Fallback to demo data on error
+            try {
+                const jobs = await this.simulateJobSearch(keywords, location, minSalary, maxSalary, jobType);
+                this.currentJobs = jobs;
+                this.totalJobs = jobs.length;
+                this.displayJobs();
+            } catch (fallbackError) {
+                console.error('Fallback error:', fallbackError);
+            }
         } finally {
             this.hideLoading();
         }
+    }
+    
+    // Adzuna API integration
+    async searchAdzunaJobs(query, location, filters) {
+        const country = this.apiConfig.adzuna.country || 'us'; // Use configured country
+        const params = new URLSearchParams({
+            app_id: this.apiConfig.adzuna.appId,
+            app_key: this.apiConfig.adzuna.apiKey,
+            results_per_page: this.jobsPerPage,
+            what: query,
+            where: location,
+            sort_by: this.currentSort === 'date' ? 'date' : 'relevance',
+            content_type: 'application/json'
+        });
+        
+        // Add salary filters
+        if (filters.minSalary) {
+            params.append('salary_min', filters.minSalary);
+        }
+        if (filters.maxSalary) {
+            params.append('salary_max', filters.maxSalary);
+        }
+        
+        const url = `${this.apiConfig.adzuna.baseUrl}/${country}/search/${this.currentPage}?${params}`;
+        console.log(`🔍 Adzuna API Request: ${url.replace(this.apiConfig.adzuna.apiKey, 'API_KEY_HIDDEN')}`);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Adzuna API Error: ${response.status} ${response.statusText}`, errorText);
+            
+            // Provide helpful error messages
+            if (response.status === 401) {
+                throw new Error('Invalid API credentials. Please check your App ID and API Key.');
+            } else if (response.status === 403) {
+                throw new Error('API access forbidden. Check your API key permissions.');
+            } else if (response.status === 429) {
+                throw new Error('API rate limit exceeded. Please wait before making more requests.');
+            } else {
+                throw new Error(`Adzuna API error: ${response.status} ${response.statusText}`);
+            }
+        }
+        
+        const data = await response.json();
+        console.log(`✅ Adzuna API Success: Found ${data.count} total jobs`);
+        
+        this.totalJobs = data.count;
+        
+        return data.results.map(job => ({
+            id: job.id,
+            title: job.title,
+            company: job.company.display_name,
+            location: job.location.display_name,
+            salary: job.salary_min && job.salary_max 
+                ? `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}` 
+                : job.salary_min ? `$${job.salary_min.toLocaleString()}+` 
+                : 'Salary not specified',
+            description: job.description,
+            url: job.redirect_url,
+            posted: new Date(job.created).toLocaleDateString(),
+            type: job.contract_type || 'Full-time',
+            category: job.category?.label || 'General'
+        }));
+    }
+    
+    // JSearch API (RapidAPI) integration
+    async searchJSearchJobs(query, location, filters) {
+        const searchQuery = location ? `${query} in ${location}` : query;
+        
+        const params = new URLSearchParams({
+            query: searchQuery,
+            page: this.currentPage.toString(),
+            num_pages: '1',
+            date_posted: 'all',
+            remote_jobs_only: 'false'
+        });
+        
+        // Add employment type filter
+        if (filters.jobType && filters.jobType !== 'all') {
+            params.append('employment_types', filters.jobType.toUpperCase());
+        }
+        
+        const url = `${this.apiConfig.jsearch.baseUrl}?${params}`;
+        console.log(`🔍 JSearch API Request: ${url}`);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+                'X-RapidAPI-Key': this.apiConfig.jsearch.apiKey,
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ JSearch API Error: ${response.status} ${response.statusText}`, errorText);
+            
+            // Provide helpful error messages
+            if (response.status === 401) {
+                throw new Error('Invalid RapidAPI key. Please check your JSearch API key.');
+            } else if (response.status === 403) {
+                throw new Error('API access forbidden. Check your RapidAPI subscription.');
+            } else if (response.status === 429) {
+                throw new Error('API rate limit exceeded. Please upgrade your RapidAPI plan.');
+            } else {
+                throw new Error(`JSearch API error: ${response.status} ${response.statusText}`);
+            }
+        }
+        
+        const data = await response.json();
+        console.log(`✅ JSearch API Success:`, data);
+        
+        if (!data.data || data.data.length === 0) {
+            console.warn('⚠️ No jobs found in API response');
+            return [];
+        }
+        
+        this.totalJobs = data.data.length; // JSearch doesn't provide total count
+        
+        return data.data.map(job => ({
+            id: job.job_id || Math.random().toString(36),
+            title: job.job_title || 'No title',
+            company: job.employer_name || 'Company not specified',
+            location: this.formatLocation(job),
+            salary: this.formatSalary(job),
+            description: job.job_description || 'No description available',
+            url: job.job_apply_link || '#',
+            posted: this.formatDate(job.job_posted_at_datetime_utc),
+            type: job.job_employment_type || 'Full-time',
+            category: 'Technology'
+        }));
+    }
+    
+    // Helper methods for JSearch data formatting
+    formatLocation(job) {
+        if (job.job_city && job.job_state) {
+            return `${job.job_city}, ${job.job_state}`;
+        } else if (job.job_city) {
+            return job.job_city;
+        } else if (job.job_country) {
+            return job.job_country;
+        }
+        return 'Location not specified';
+    }
+    
+    formatSalary(job) {
+        if (job.job_min_salary && job.job_max_salary) {
+            return `$${job.job_min_salary.toLocaleString()} - $${job.job_max_salary.toLocaleString()}`;
+        } else if (job.job_min_salary) {
+            return `$${job.job_min_salary.toLocaleString()}+`;
+        } else if (job.job_salary) {
+            return job.job_salary;
+        }
+        return 'Salary not specified';
+    }
+    
+    formatDate(dateString) {
+        if (!dateString) return 'Recently posted';
+        try {
+            return new Date(dateString).toLocaleDateString();
+        } catch (error) {
+            return 'Recently posted';
+        }
+    }
+    
+    // Reed API integration (UK focused)
+    async searchReedJobs(query, location, filters) {
+        const params = new URLSearchParams({
+            keywords: query,
+            locationName: location,
+            resultsToShow: this.jobsPerPage.toString(),
+            resultsToSkip: ((this.currentPage - 1) * this.jobsPerPage).toString()
+        });
+        
+        // Add salary filters
+        if (filters.minSalary) {
+            params.append('minimumSalary', filters.minSalary);
+        }
+        if (filters.maxSalary) {
+            params.append('maximumSalary', filters.maxSalary);
+        }
+        
+        // Add employment type filter
+        if (filters.jobType && filters.jobType !== 'all') {
+            if (filters.jobType === 'permanent') {
+                params.append('permanent', 'true');
+            } else if (filters.jobType === 'contract') {
+                params.append('contract', 'true');
+            }
+        }
+        
+        const response = await fetch(
+            `${this.apiConfig.reed.baseUrl}?${params}`,
+            {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Basic ${btoa(this.apiConfig.reed.apiKey + ':')}`,
+                    'Accept': 'application/json'
+                }
+            }
+        );
+        
+        if (!response.ok) {
+            throw new Error(`Reed API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        this.totalJobs = data.totalResults;
+        
+        return data.results.map(job => ({
+            id: job.jobId,
+            title: job.jobTitle,
+            company: job.employerName,
+            location: job.locationName,
+            salary: job.minimumSalary && job.maximumSalary 
+                ? `£${job.minimumSalary.toLocaleString()} - £${job.maximumSalary.toLocaleString()}` 
+                : job.minimumSalary ? `£${job.minimumSalary.toLocaleString()}+` : 'Salary not specified',
+            description: job.jobDescription,
+            url: job.jobUrl,
+            posted: job.date ? new Date(job.date).toLocaleDateString() : 'Recently',
+            type: job.jobType || 'Full-time',
+            category: 'General'
+        }));
     }
     
     // Simulate job search since we don't have real API keys

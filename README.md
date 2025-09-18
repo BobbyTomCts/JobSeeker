@@ -1,161 +1,109 @@
 # JobSeeker - Job Search Application
 
-A modern, single-page job search application built with HTML, CSS, and JavaScript. Features job searching, favorites management, application tracking, and resume upload functionality.
+A modern, responsive job search application with real API integration support.
 
-## 🚀 Features
+## Features
 
-- **Job Search**: Search jobs by keywords, location, salary range, and job type
-- **Advanced Filtering**: Sort results by relevance, date, salary, or company
-- **Pagination**: Navigate through job results with pagination
-- **Job Details**: View detailed job information in modal popups
-- **Favorites System**: Save and manage favorite job listings
-- **Application Tracking**: Track your job applications with status updates
-- **Resume Upload**: Upload and manage your resume (PDF, DOC, DOCX)
-- **Local Storage**: All data persists locally in your browser
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- 🔍 **Smart Job Search**: Search by keywords, location, salary range, and job type
+- 💾 **Favorites System**: Save interesting jobs for later review
+- 📄 **Application Tracking**: Track your job applications and their status
+- 📋 **Resume Upload**: Upload and manage your resume
+- 🌙 **Dark Theme**: Minimal, modern dark interface
+- 📱 **Responsive Design**: Works on desktop, tablet, and mobile
 
-## 🛠️ Setup Instructions
+## Supported APIs
 
-### Option 1: Using Real Adzuna API (Recommended)
+- **Adzuna API** (Global coverage, recommended)
+- **JSearch API** (RapidAPI platform, easy setup)
+- **Reed API** (UK focused, free)
 
-1. **Get API Keys**:
-   - Visit [Adzuna API](https://developer.adzuna.com/)
-   - Sign up for a free developer account
-   - Get your `API_KEY` and `APP_ID`
+## Quick Start
 
-2. **Configure API**:
-   - Open `script.js`
-   - Replace `YOUR_ADZUNA_API_KEY` with your actual API key
-   - Replace `YOUR_ADZUNA_APP_ID` with your actual App ID
+### Option 1: Use with Demo Data (No setup required)
+1. Open `index.html` in your browser
+2. Start searching! The app will use demo data
 
-3. **Enable CORS** (for local development):
-   - Use a local server (not just opening the HTML file)
-   - Or use a CORS browser extension for testing
+### Option 2: Integrate Real APIs
+1. Run the setup script:
+   - **Windows**: Double-click `setup.bat`
+   - **Mac/Linux**: Run `./setup.sh`
+2. Follow the instructions in `API_SETUP_GUIDE.md`
+3. Configure your API keys in `config.js`
+4. Uncomment the config.js script tag in `index.html`
 
-### Option 2: Demo Mode (Current Setup)
+## Files Overview
 
-The application currently runs in demo mode with simulated job data. This allows you to test all features without API keys.
+- `index.html` - Main application interface
+- `styles.css` - Dark theme styling
+- `script.js` - Application logic with API integration
+- `config-template.js` - API configuration template
+- `API_SETUP_GUIDE.md` - Detailed API setup instructions
+- `setup.bat` / `setup.sh` - Quick setup scripts
 
-### Option 3: Alternative APIs
+## API Configuration
 
-You can also configure other job APIs by modifying the `simulateJobSearch` method:
+Create a `config.js` file based on `config-template.js`:
 
-- **Indeed API**: Requires partner status
-- **GitHub Jobs API**: (Deprecated, but you can use archived data)
-- **Reed API**: UK-focused job search
-- **JSearch API** (RapidAPI): Multiple job board aggregation
-
-## 📁 File Structure
-
+```javascript
+window.API_CONFIG = {
+    adzuna: {
+        appId: 'YOUR_APP_ID',
+        apiKey: 'YOUR_API_KEY',
+        enabled: true,
+        country: 'us'
+    }
+    // ... other APIs
+};
 ```
-JobSearch/
-├── index.html          # Main HTML structure
-├── styles.css          # CSS styling and responsive design
-├── script.js           # JavaScript functionality and API integration
-└── README.md          # Setup instructions and documentation
-```
 
-## 🎯 How to Use
+## Getting API Keys
 
-### 1. Search for Jobs
-- Enter keywords (e.g., "Software Developer", "Marketing Manager")
-- Specify location (optional)
-- Set salary range (optional)
-- Select job type (optional)
-- Click "Search Jobs"
+### Adzuna (Recommended)
+1. Visit https://developer.adzuna.com/
+2. Sign up for free developer account
+3. Create new app to get App ID and API Key
+4. Free tier: 1,000 calls/month
 
-### 2. Browse Results
-- View job listings in a sortable table
-- Click job titles to view detailed information
-- Use pagination to navigate through results
-- Sort by relevance, date, salary, or company
+### JSearch (RapidAPI)
+1. Visit https://rapidapi.com/
+2. Subscribe to JSearch API
+3. Copy your RapidAPI key
+4. Free tier: 100 requests/month
 
-### 3. Manage Favorites
-- Click the heart icon to add/remove favorites
-- Switch to "Favorites" tab to view saved jobs
-- Favorites persist between browser sessions
+### Reed (UK Jobs)
+1. Visit https://www.reed.co.uk/developers/
+2. Register for developer account
+3. Get API key from dashboard
+4. Free with generous limits
 
-### 4. Apply to Jobs
-- Upload your resume in the "Applications" tab
-- Click "Apply Now" on any job
-- Track your applications with status updates
+## Development
 
-## 🔧 Technical Details
+The application is built with vanilla JavaScript, HTML5, and CSS3. No build process required.
 
-### API Integration
-- Configured for Adzuna API (modify for other APIs)
-- Handles API responses, errors, and loading states
-- Implements rate limiting and error recovery
+### Key Components
+- `JobSearchApp` class handles all functionality
+- Modular API integration with fallback to demo data
+- Local storage for persistence
+- Responsive CSS Grid and Flexbox layouts
 
-### Local Storage
-- Favorites: `jobseeker-favorites`
-- Applications: `jobseeker-applications`
-- Resume: `jobseeker-resume`
+## Browser Support
 
-### Responsive Breakpoints
-- Desktop: 1200px+
-- Tablet: 768px - 1199px
-- Mobile: < 768px
+- Chrome 60+
+- Firefox 55+
+- Safari 12+
+- Edge 79+
 
-## 🎨 Customization
+## Security Notes
 
-### Styling
-- Modify `styles.css` to change colors, fonts, or layout
-- CSS variables for easy theme customization
-- Font Awesome icons for consistent iconography
+⚠️ **Client-side API keys are visible to users**. For production:
+- Move API calls to backend server
+- Use environment variables
+- Implement proper authentication
 
-### Functionality
-- Add more job search filters in the HTML form
-- Extend the `JobSearchApp` class for additional features
-- Implement user authentication for multi-device sync
+## License
 
-## 🐛 Troubleshooting
+MIT License - Feel free to use and modify for your projects.
 
-### Common Issues
+## Support
 
-1. **CORS Errors**:
-   - Use a local server (e.g., Live Server in VS Code)
-   - Enable CORS in browser for testing
-
-2. **API Rate Limits**:
-   - Implement request throttling
-   - Cache responses for repeated searches
-
-3. **File Upload Issues**:
-   - Check file size limits (5MB max)
-   - Ensure correct MIME types (PDF, DOC, DOCX)
-
-## 🚀 Deployment
-
-### GitHub Pages
-1. Push code to GitHub repository
-2. Go to Settings → Pages
-3. Select source branch (main)
-4. Access at `https://username.github.io/repository-name`
-
-### Netlify
-1. Drag and drop the folder to Netlify
-2. Automatic deployment with custom domain support
-
-### Vercel
-1. Import GitHub repository
-2. Automatic deployment with preview URLs
-
-## 📱 Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## 🤝 Contributing
-
-Feel free to submit issues, fork the repository, and create pull requests for any improvements.
-
----
-
-**Note**: This is a demo application. For production use, implement proper error handling, security measures, and backend integration.
+See `API_SETUP_GUIDE.md` for troubleshooting and detailed setup instructions.

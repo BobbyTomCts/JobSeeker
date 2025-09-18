@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobSeeker - API Integration Example</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Your existing HTML content goes here -->
+    <!-- This is just the structure for including config files -->
+    
+    <!-- Option 1: Include external config file (recommended) -->
+    <!-- 
+    <script src="config.js"></script>
+    -->
+    
+    <!-- Option 2: Inline configuration (quick setup) -->
+    <script>
+        // Uncomment and configure one of the APIs below
+        window.API_CONFIG = {
+            adzuna: {
+                baseUrl: 'https://api.adzuna.com/v1/api/jobs',
+                appId: 'YOUR_ADZUNA_APP_ID',
+                apiKey: 'YOUR_ADZUNA_API_KEY',
+                enabled: false, // Set to true when configured
+                country: 'us'
+            },
+            jsearch: {
+                baseUrl: 'https://jsearch.p.rapidapi.com/search',
+                apiKey: 'YOUR_RAPIDAPI_KEY',
+                enabled: false // Set to true when configured
+            },
+            reed: {
+                baseUrl: 'https://www.reed.co.uk/api/1.0/search',
+                apiKey: 'YOUR_REED_API_KEY',
+                enabled: false // Set to true when configured
+            }
+        };
+    </script>
+    
+    <!-- Main application script -->
+    <script src="script.js"></script>
+    
+    <div class="api-integration-notice" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--accent-primary);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        max-width: 300px;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 1001;
+    ">
+        <strong>API Setup Required:</strong><br>
+        To use real job data, configure your API keys in the script above or create a config.js file.
+        <br><br>
+        <a href="API_SETUP_GUIDE.md" target="_blank" style="color: #fff; text-decoration: underline;">
+            View Setup Guide
+        </a>
+    </div>
+</body>
+</html>
